@@ -8,6 +8,7 @@ steps = [
     "scripts/02_eda_visualization.py",
     "scripts/03_load_to_sqlite.py",
     "scripts/04_export_for_powerbi.py",
+    "scripts/05_statistical_testing.py",
 ]
 
 for step in steps:
