@@ -33,23 +33,25 @@ This matches the credit score pattern in the data (average score: P1 = 716, P2 =
 
 ## Project Structure
 
+
 ```
 credit-risk-analysis/
 ├── data/
 │   ├── raw/                      original Excel files
-│   └── processed/                clean CSV, SQLite database, Power BI file
+│   └── processed/                clean CSV, cleaning log, SQLite database, Power BI file, test results
 ├── scripts/
 │   ├── 01_data_cleaning.py       clean and merge the two datasets
 │   ├── 02_eda_visualization.py   11 charts
 │   ├── 03_load_to_sqlite.py      create the SQL database
-│   └── 04_export_for_powerbi.py  Power BI ready file
+│   ├── 04_export_for_powerbi.py  Power BI ready file
+│   └── 05_statistical_testing.py Chi-Square, ANOVA and VIF
 ├── sql/
 │   └── analysis_queries.sql      14 queries
 ├── powerbi/
 │   ├── powerbi_guide.md          DAX measures and dashboard build steps
 │   └── credit_risk_dashboard.pbix
 ├── images/                       EDA charts and dashboard screenshot
-├── run_all.py                    runs all four scripts
+├── run_all.py                    runs all five scripts
 ├── run_sql.py                    runs one SQL query and prints the result
 └── requirements.txt
 ```
@@ -90,7 +92,48 @@ The database file is `data/processed/loan_data.db`. You can also open it with a 
 | ![Risk categories](images/01_risk_category_count.png) | ![Credit score](images/05_score_by_risk.png) |
 | ![Age](images/08_risk_by_age.png) | ![Missed payments](images/10_missed_payment_by_risk.png) |
 
-## 3. SQL Analysis
+
+## 3. Statistical Testing
+
+Which columns are really linked to the risk category? Three tests were used (`05_statistical_testing.py`), with a significance level of 0.05.
+
+**Chi-Square test (categorical columns vs risk category)**
+- H0: the column and the risk category are independent. H1: they are related.
+- Cramer's V shows how strong the link is.
+
+| Column | P-value | Cramer's V |
+|---|---|---|
+| MARITALSTATUS | below 0.001 | 0.160 |
+| last_prod_enq2 | below 0.001 | 0.139 |
+| first_prod_enq2 | below 0.001 | 0.105 |
+| EDUCATION | below 0.001 | 0.039 |
+| GENDER | below 0.001 | 0.024 |
+
+All five are statistically significant, but the links are weak. Gender is almost irrelevant (V = 0.024).
+
+**ANOVA (numerical columns vs risk category)**
+- H0: the average of the column is the same in P1, P2, P3 and P4. H1: at least one category is different.
+- 72 columns tested, 69 are significant. The 3 that are not: `num_lss_12mts`, `num_lss_6mts`, `pct_currentBal_all_TL`.
+- Eta squared shows how much of the variation the risk category explains.
+
+| Column | F-statistic | Eta squared |
+|---|---|---|
+| Credit_Score | 41,072 | 0.75 |
+| enq_L3m (enquiries, last 3 months) | 7,319 | 0.34 |
+| Age_Oldest_TL (age of oldest loan account) | 6,959 | 0.33 |
+
+**VIF (multicollinearity)**
+- Many columns repeat the same information (for example total accounts = closed + active accounts).
+- Columns were removed one by one until every VIF was below 5. `Credit_Score` was kept on purpose (VIF 5.4) because it is the strongest column.
+- Result: 69 significant columns reduced to **46**. The list is in `data/processed/stats_selected_features.csv`.
+
+**Why effect size matters:** with 42,000+ rows, almost every p-value is close to zero. A small p-value only says that a link exists, not that it is strong. That is why Cramer's V and eta squared are reported next to the p-values.
+
+| | |
+|---|---|
+| ![Cramers V](images/12_chi_square_cramers_v.png) | ![ANOVA](images/13_anova_top_features.png) |
+
+## 4. SQL Analysis
 
 `sql/analysis_queries.sql` has 14 queries that use:
 
@@ -111,7 +154,7 @@ GROUP BY age_group
 ORDER BY age_group;
 ```
 
-## 4. Power BI Dashboard
+## 5. Power BI Dashboard
 
 A single-page dark theme dashboard with 4 KPI cards, 3 filters (Gender, Age Group, Education) and 5 charts.
 Data file: `data/processed/powerbi_data.csv`.

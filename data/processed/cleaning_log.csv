@@ -1,0 +1,8 @@
+Step,Rows,Columns
+Raw dataset 1,51336,26
+Raw dataset 2,51336,62
+Dataset 1 after removing -99999 rows,51296,26
+Dataset 2 after dropping high-missing columns,51336,54
+Dataset 2 after removing -99999 rows,42066,54
+Merged dataset,42064,79
+Final clean file (with 5 new columns),42064,84
